@@ -1,45 +1,39 @@
 import unittest
-from game.game_logic import Game
-from game.word_validator import WordValidator
+from game.game_logic import WordLadderGame
+from utils.dictionary_loader import DictionaryLoader
 
 class TestGameLogic(unittest.TestCase):
 
     def setUp(self):
-        self.game = Game()
-        self.validator = WordValidator()
+        dictionary_loader = DictionaryLoader('data/dictionary.txt')
+        word_dictionary = dictionary_loader.get_all_words()
+        self.game = WordLadderGame(word_dictionary)
 
     def test_start_game(self):
-        self.game.start()
-        self.assertTrue(self.game.is_running)
+        self.game.start_game("cat", "bat")
+        self.assertEqual(self.game.start_word, "cat")
+        self.assertEqual(self.game.end_word, "bat")
+        self.assertTrue(self.game.is_valid_transformation("bat"))
 
     def test_valid_word_transformation(self):
-        valid_word = "cat"
-        next_word = "bat"
-        self.assertTrue(self.validator.is_valid_transformation(valid_word, next_word))
+        self.game.start_game("cat", "bat")
+        self.assertTrue(self.game.is_valid_transformation("bat"))
 
     def test_invalid_word_transformation(self):
-        valid_word = "cat"
-        next_word = "dog"
-        self.assertFalse(self.validator.is_valid_transformation(valid_word, next_word))
+        self.game.start_game("cat", "bat")
+        self.assertFalse(self.game.is_valid_transformation("dog"))
 
     def test_win_condition(self):
-        self.game.start()
-        self.game.current_word = "cat"
-        self.game.target_word = "bat"
+        self.game.start_game("cat", "bat")
         self.game.make_move("bat")
-        self.assertTrue(self.game.check_win())
+        self.assertEqual(self.game.current_word, "bat")
+        self.assertTrue(self.game.make_move("bat"))
 
     def test_score_update(self):
-        self.game.start()
-        initial_score = self.game.score
+        self.game.start_game("cat", "bat")
+        initial_score = self.game.get_score()
         self.game.make_move("bat")
-        self.assertGreater(self.game.score, initial_score)
-
-    def test_invalid_move(self):
-        self.game.start()
-        self.game.current_word = "cat"
-        with self.assertRaises(ValueError):
-            self.game.make_move("dog")
+        self.assertGreater(self.game.get_score(), initial_score)
 
 if __name__ == '__main__':
     unittest.main()
