@@ -10,16 +10,10 @@ def main():
 
     # Load the word dictionary
     dictionary_loader = DictionaryLoader('data/dictionary.txt')
-    word_dictionary = dictionary_loader.get_all_words()
     
     # Initialize the main game screen
     main_screen()
 
-    # Start the game
-    start_word = "start"  # Replace with the actual start word
-    end_word = "end"      # Replace with the actual end word
-    game = WordLadderGame(word_dictionary)
-    game.start_game(start_word, end_word)
 
 if __name__ == "__main__":
     main()
