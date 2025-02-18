@@ -1,24 +1,31 @@
 from collections import deque
+import logging
 
 def bfs(start_word, target_word, word_dict):
+    """
+    Breadth-first search implementation for word ladder.
+    Returns the shortest path from start_word to target_word.
+    """
     if start_word == target_word:
         return [start_word]
 
-    queue = deque([[start_word]])
-    visited = set([start_word])
+    queue = deque([(start_word, [start_word])])
+    visited = {start_word}
 
     while queue:
-        current_path = queue.popleft()
-        current_word = current_path[-1]
-
-        for next_word in get_neighbors(current_word, word_dict):
-            if next_word not in visited:
-                visited.add(next_word)
-                new_path = current_path + [next_word]
-                if next_word == target_word:
-                    return new_path
-                queue.append(new_path)
-
+        current_word, path = queue.popleft()
+        
+        # Get all possible one-letter transformations
+        for i in range(len(current_word)):
+            for c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ':
+                next_word = current_word[:i] + c + current_word[i+1:]
+                
+                if next_word in word_dict and next_word not in visited:
+                    if next_word == target_word:
+                        return path + [next_word]
+                    visited.add(next_word)
+                    queue.append((next_word, path + [next_word]))
+    
     return None
 
 def get_neighbors(word, word_dict):

@@ -6,11 +6,14 @@ __pycache__/
 # C extensions
 *.so
 
+static/
+
 # Distribution / packaging
 .Python
 __pycache__/
 *.cache
 *.pyc
+.pyc
 build/
 develop-eggs/
 dist/

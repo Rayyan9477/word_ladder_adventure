@@ -1,0 +1,10 @@
+// Word Ladder
+digraph {
+	CORN [color=green]
+	CARN
+	CORN -> CARN [color=black]
+	CORN -> MORN [color=red style=dashed]
+	MORN -> MORE [color=red style=dashed]
+	MORE -> MARE [color=red style=dashed]
+	MARE -> MAZE [color=red style=dashed]
+}
