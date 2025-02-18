@@ -1,3 +1,4 @@
+import logging
 import os
 
 class DictionaryLoader:
@@ -6,19 +7,23 @@ class DictionaryLoader:
         self.words = self.load_dictionary()
 
     def load_dictionary(self):
-        if not os.path.exists(self.dictionary_file):
-            raise FileNotFoundError(f"Dictionary file not found: {self.dictionary_file}")
-        
-        with open(self.dictionary_file, 'r') as file:
-            words = {line.strip().lower() for line in file if line.strip()}
-        return words
-
-    def is_valid_word(self, word):
-        return word.lower() in self.words
+        try:
+            with open(self.dictionary_file, 'r') as file:
+                # Store words in both uppercase and lowercase
+                words = set()
+                for line in file:
+                    word = line.strip()
+                    if word:  # Skip empty lines
+                        words.add(word.upper())  # Add uppercase version
+                        words.add(word.lower())  # Add lowercase version
+                logging.info(f"Loaded {len(words)} words from {self.dictionary_file}")
+                return words
+        except FileNotFoundError:
+            logging.error(f"Dictionary file not found: {self.dictionary_file}")
+            return set()
+        except Exception as e:
+            logging.error(f"Error loading dictionary file: {e}")
+            return set()
 
     def get_all_words(self):
         return self.words
-
-# Example usage:
-# loader = DictionaryLoader()
-# print(loader.get_all_words())  # This will print all valid words from the dictionary.

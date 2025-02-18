@@ -4,6 +4,9 @@ from utils.dictionary_loader import DictionaryLoader
 from ui.graph_visualizer import GraphVisualizer  # Import GraphVisualizer
 
 def main_screen():
+    """
+    Implements the main screen of the Word Ladder Adventure Game using Streamlit.
+    """
     st.title("Word Ladder Adventure Game")
     st.write("Welcome to the Word Ladder Adventure Game!")
     st.write("Transform one word into another by changing one letter at a time.")
@@ -12,7 +15,7 @@ def main_screen():
     game_mode = st.sidebar.selectbox("Select Game Mode", ["Beginner", "Advanced", "Challenge"])
     st.sidebar.write("You selected:", game_mode)
 
-    algorithm = st.sidebar.selectbox("Select Algorithm", ["a_star", "bfs", "ucs"])
+    algorithm = st.sidebar.radio("Select Algorithm", ["a_star", "bfs", "ucs"])
     st.sidebar.write("You selected:", algorithm)
     
     max_moves = st.sidebar.slider("Max Moves", min_value=5, max_value=30, value=20, step=5)
@@ -36,22 +39,32 @@ def main_screen():
         if st.button("Submit Words"):
             if start_word and end_word:
                 try:
-                    game = WordLadderGame(word_dictionary, algorithm, max_moves)
-                    game.start_game(start_word, end_word)
-                    st.session_state['game'] = game
-                    st.write("Game started successfully!")
-                    st.write(f"Start Word: {start_word}")
-                    st.write(f"End Word: {end_word}")
-                    st.write(f"Algorithm: {algorithm}")
-                    st.write(f"Max Moves: {max_moves}")
+                    # Validate input word length
+                    if len(start_word) != len(end_word):
+                        st.error("Start and end words must have the same length.")
+                    else:
+                        game = WordLadderGame(word_dictionary, algorithm, max_moves)
+                        game.start_game(start_word, end_word)
+                        st.session_state['game'] = game
+                        st.write("Game started successfully!")
+                        st.write(f"Start Word: {start_word}")
+                        st.write(f"End Word: {end_word}")
+                        st.write(f"Algorithm: {algorithm}")
+                        st.write(f"Max Moves: {max_moves}")
 
-                    # Visualize the graph
-                    graph_visualizer = GraphVisualizer()
-                    for i in range(len(game.get_word_ladder()) - 1):
-                        graph_visualizer.add_edge(game.get_word_ladder()[i], game.get_word_ladder()[i+1])
-                    graph_visualizer.render_graph()
-                    st.image("word_ladder.png", use_column_width=True)
-
+                        # Visualize the graph
+                        try:
+                            graph_visualizer = GraphVisualizer(game.graph)
+                            word_ladder = game.get_word_ladder()
+                            if word_ladder and len(word_ladder) > 1:
+                                for i in range(len(word_ladder) - 1):
+                                    graph_visualizer.add_edge(word_ladder[i], word_ladder[i+1])
+                                graph_visualizer.render_graph()
+                                st.image('word_ladder.png')
+                            else:
+                                st.warning("No word ladder to visualize.")
+                        except Exception as e:
+                            st.error(f"Error visualizing graph: {e}")
                 except ValueError as e:
                     st.error(str(e))
             else:
