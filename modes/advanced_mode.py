@@ -1,12 +1,12 @@
-from game.game_logic import GameLogic
-from utils.dictionary_loader import load_dictionary
+from game.game_logic import WordLadderGame
+from utils.dictionary_loader import DictionaryLoader
 
 import logging
 
 class AdvancedMode:
     def __init__(self):
-        self.game_logic = GameLogic()
-        self.dictionary = load_dictionary()
+        self.game_logic = WordLadderGame()
+        self.dictionary = DictionaryLoader()
         self.max_attempts = 5
         self.current_attempts = 0
 

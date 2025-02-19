@@ -1,6 +1,7 @@
 from algorithms.a_star import a_star_search
 from algorithms.bfs import bfs
 from algorithms.ucs import uniform_cost_search
+from algorithms.gbfs import greedy_best_first_search
 from game.word_validator import is_valid_word
 import logging
 
@@ -10,7 +11,6 @@ class WordLadderGame:
         self.dictionary = {word.upper() for word in dictionary}
         self.algorithm = algorithm
         self.max_moves = max_moves
-        # Initialize game state variables
         self.start_word = None
         self.end_word = None
         self.current_word = None
@@ -23,13 +23,17 @@ class WordLadderGame:
         
     def find_path(self, start_word, target_word):
         """Find path using selected algorithm"""
-        if self.algorithm == 'bfs':
-            return bfs(start_word, target_word, self.dictionary)
-        elif self.algorithm == 'a_star':
-            return a_star_search(start_word, target_word, self.dictionary)
-        elif self.algorithm == 'ucs':
-            return uniform_cost_search(start_word, target_word, self.dictionary)
-        return None
+        algorithms = {
+            'bfs': bfs,
+            'a_star': a_star_search,
+            'ucs': uniform_cost_search,
+            'gbfs': greedy_best_first_search
+        }
+        
+        if self.algorithm not in algorithms:
+            raise ValueError(f"Unknown algorithm: {self.algorithm}")
+            
+        return algorithms[self.algorithm](start_word, target_word, self.dictionary)
 
     def start_game(self, start_word, end_word):
         """Initialize game with start and end words"""
@@ -88,19 +92,26 @@ class WordLadderGame:
         return True, f"Valid move! {self.moves_remaining} moves remaining"
 
     def get_hint(self):
-        """Get AI hint for next move"""
+        """Get AI-powered hint based on current game state"""
         if self.hints_remaining <= 0:
             return None, "No hints remaining"
-            
+        
         if self.game_over:
             return None, "Game is over"
             
-        current_index = len(self.player_path) - 1
-        if current_index < len(self.solution_path) - 1:
+        next_word = self.hint_system.get_next_move(
+            self.current_word, 
+            self.end_word, 
+            self.solution_path
+        )
+        
+        if next_word:
             self.hints_remaining -= 1
-            next_word = self.solution_path[current_index + 1]
-            return next_word, f"Try: {next_word} ({self.hints_remaining} hints remaining)"
-            
+            difficulty = self.hint_system.get_difficulty_hint(
+                (self.current_word, next_word)
+            )
+            return next_word, f"Try: {next_word} (Difficulty: {difficulty}, {self.hints_remaining} hints remaining)"
+        
         return None, "No hint available"
 
     def get_graph_data(self):
@@ -125,3 +136,11 @@ class WordLadderGame:
         self.game_over = False  # Make sure this is included
         self.won = False       # Make sure this is included
         self.hints_remaining = 3
+
+
+    def calculate_score(self):
+        """Calculate score based on moves and hints used"""
+        base_score = 100
+        move_penalty = 5 * (len(self.player_path) - len(self.solution_path))
+        hint_penalty = 10 * (3 - self.hints_remaining)
+        return max(0, base_score - move_penalty - hint_penalty)

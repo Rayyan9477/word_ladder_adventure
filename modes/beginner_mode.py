@@ -1,16 +1,19 @@
-from game.game_logic import GameLogic
-from game.scoring import Scoring
-from utils.dictionary_loader import load_dictionary
+from game.game_logic import WordLadderGame
+from game.scoring import ScoringSystem
+from utils.dictionary_loader import DictionaryLoader
 
 import logging
 
 class BeginnerMode:
-    def __init__(self):
-        self.game_logic = GameLogic()
-        self.scoring = Scoring()
-        self.word_dictionary = load_dictionary()
+    def __init__(self, game):
+        self.game = game
+        self.game_logic = WordLadderGame()
+        self.scoring = ScoringSystem()
+        self.word_dictionary = DictionaryLoader()
         self.max_attempts = 5  # Limit attempts for beginners
         self.current_attempts = 0
+        self.max_hints = 5
+        self.setup_mode()
 
     def start_game(self):
         logging.info("Welcome to the Beginner Mode of Word Ladder Adventure!")
@@ -36,3 +39,14 @@ class BeginnerMode:
 
     def validate_word(self, word):
         return word in self.word_dictionary
+    
+
+    def setup_mode(self):
+        """Configure game for beginner mode"""
+        self.game.hints_remaining = self.max_hints
+        self.game.max_moves += 5  # Extra moves
+        
+    def calculate_score(self):
+        """Modified scoring for beginners"""
+        base_score = self.game.calculate_score()
+        return int(base_score * 0.8)  # Reduced scoring pressure

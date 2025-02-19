@@ -1,14 +1,16 @@
-from game.game_logic import GameLogic
-from utils.dictionary_loader import load_dictionary
+from game.game_logic import WordLadderGame
+from utils.dictionary_loader import DictionaryLoader
 
 import logging
 
 class ChallengeMode:
     def __init__(self):
-        self.game_logic = GameLogic()
-        self.dictionary = load_dictionary()
+        self.game_logic = WordLadderGame()
+        self.dictionary = DictionaryLoader()
         self.max_attempts = 5  # Maximum attempts allowed
         self.current_attempts = 0
+        self.max_hints =1
+        self.setup_mode()
 
     def start_game(self):
         logging.info("Welcome to Challenge Mode!")
@@ -38,3 +40,13 @@ class ChallengeMode:
 
     def is_valid_word(self, word):
         return word in self.dictionary
+    
+    def setup_mode(self):
+        """Configure game for challenge mode"""
+        self.game.hints_remaining = self.max_hints
+        self.game.max_moves -= 2  # Fewer moves
+        
+    def calculate_score(self):
+        """Modified scoring for challenge mode"""
+        base_score = self.game.calculate_score()
+        return int(base_score * 1.5)  

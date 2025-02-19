@@ -14,35 +14,77 @@ def main_screen():
     os.makedirs(static_dir, exist_ok=True)
     image_path = os.path.join(static_dir, 'word_ladder')
 
-    # Initialize session state
-    if 'game' not in st.session_state:
-        dictionary_loader = DictionaryLoader('data/dictionary.txt')
-        st.session_state.game = WordLadderGame(dictionary_loader.get_all_words())
-        st.session_state.dictionary_loader = dictionary_loader
+    # Initialize dictionary loader if not in session state
+    if 'dictionary_loader' not in st.session_state:
+        st.session_state.dictionary_loader = DictionaryLoader('data/dictionary.txt')
 
     # Game options in sidebar
     with st.sidebar:
-        st.header("Game Options")
-        algorithm = st.radio("Select Algorithm", ['BFS', 'A*', 'UCS'])
-        max_moves = st.slider("Max Moves", 5, 20, 10)
+        st.header("Game Settings")
         
+        # Mode selection
+        mode = st.selectbox(
+            "Select Mode",
+            ["Normal", "Beginner", "Advanced", "Challenge"],
+            help="Choose game difficulty mode"
+        )
+        
+        # Algorithm selection
+        algorithm = st.radio(
+            "Select Algorithm",
+            ['BFS', 'A*', 'UCS'],
+            help="Choose pathfinding algorithm"
+        )
+        
+        # Moves configuration
+        base_moves = st.slider(
+            "Base Moves", 
+            5, 20, 10,
+            help="Base number of moves allowed"
+        )
+
+        # Adjust moves based on mode
+        max_moves = base_moves
+        if mode == "Beginner":
+            st.info("Beginner mode: More hints and moves available")
+            max_moves += 5
+        elif mode == "Challenge":
+            st.warning("Challenge mode: Limited hints and moves")
+            max_moves -= 2
+
+        # New Game button
         if st.button("New Game"):
+            # Clean up old graph
             if os.path.exists(f"{image_path}.png"):
                 try:
                     os.remove(f"{image_path}.png")
                 except Exception:
                     pass
+            
+            # Reset session state
+            if 'current_graph' in st.session_state:
+                del st.session_state['current_graph']
+            
+            # Create new game instance
             st.session_state.game = WordLadderGame(
                 st.session_state.dictionary_loader.get_all_words(),
-                algorithm.lower(),
-                max_moves
+                algorithm=algorithm.lower(),
+                max_moves=max_moves
             )
             st.rerun()
 
+    # Initialize game if not in session state
+    if 'game' not in st.session_state:
+        st.session_state.game = WordLadderGame(
+            st.session_state.dictionary_loader.get_all_words(),
+            algorithm=algorithm.lower(),
+            max_moves=max_moves
+        )
+
     game = st.session_state.game
-    
+
     # Main game area
-    if hasattr(game, 'game_over') and not game.game_over:
+    if not game.game_over:
         # Game initialization
         if not game.start_word:
             col1, col2 = st.columns(2)
@@ -61,25 +103,22 @@ def main_screen():
         
         # Game play
         else:
-            # Display game state
+            # Game stats
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.write(f"Start: {game.start_word}")
+                st.metric("Current Word", game.current_word)
             with col2:
-                st.write(f"Current: {game.current_word}")
+                st.metric("Moves Left", game.moves_remaining)
             with col3:
-                st.write(f"Target: {game.end_word}")
+                st.metric("Target Word", game.end_word)
 
-            # Display game progress
-            st.write(f"Moves remaining: {game.moves_remaining}")
+            # Display current path
             st.write("Current path:", " → ".join(game.player_path))
-            
-            # Input for next move
-            new_word = st.text_input("Enter next word:").strip().upper()
             
             # Game controls
             col1, col2 = st.columns(2)
             with col1:
+                new_word = st.text_input("Enter next word:").strip().upper()
                 if st.button("Make Move") and new_word:
                     success, message = game.make_move(new_word)
                     if success:
@@ -96,11 +135,10 @@ def main_screen():
                             png_path = visualizer.render_graph(filename=image_path)
                             if os.path.exists(png_path):
                                 with open(png_path, "rb") as f:
-                                    graph_bytes = f.read()
-                                st.session_state['current_graph'] = graph_bytes
+                                    st.session_state['current_graph'] = f.read()
+                                st.rerun()
                         except Exception as e:
                             st.error(f"Error updating graph: {str(e)}")
-                        st.rerun()
                     else:
                         st.error(message)
             
@@ -115,33 +153,19 @@ def main_screen():
             # Display graph
             if 'current_graph' in st.session_state:
                 st.image(st.session_state['current_graph'], caption="Word Ladder Progress")
-            else:
-                try:
-                    graph_data = game.get_graph_data()
-                    visualizer = GraphVisualizer()
-                    visualizer.create_graph(
-                        graph_data['nodes'],
-                        graph_data['edges'],
-                        graph_data['solution_path']
-                    )
-                    png_path = visualizer.render_graph(filename=image_path)
-                    if os.path.exists(png_path):
-                        with open(png_path, "rb") as f:
-                            graph_bytes = f.read()
-                        st.session_state['current_graph'] = graph_bytes
-                        st.image(graph_bytes, caption="Word Ladder Progress")
-                except Exception as e:
-                    st.error(f"Error displaying graph: {str(e)}")
 
     else:
-        if hasattr(game, 'won') and game.won:
-            st.success("Congratulations! You've won!")
+        # Game Over state
+        if game.won:
+            st.success(f"Congratulations! You've won with a score of {game.calculate_score()}!")
             if 'current_graph' in st.session_state:
                 st.image(st.session_state['current_graph'], caption="Final Word Ladder")
         else:
-            st.error("Game Over!")
+            st.error("Game Over! Try again!")
         
+        # Play Again button
         if st.button("Play Again"):
+            # Clean up
             if os.path.exists(f"{image_path}.png"):
                 try:
                     os.remove(f"{image_path}.png")
@@ -149,12 +173,24 @@ def main_screen():
                     pass
             if 'current_graph' in st.session_state:
                 del st.session_state['current_graph']
+            
+            # New game
             st.session_state.game = WordLadderGame(
                 st.session_state.dictionary_loader.get_all_words(),
-                algorithm.lower(),
-                max_moves
+                algorithm=algorithm.lower(),
+                max_moves=max_moves
             )
             st.rerun()
+
+    # Game instructions
+    with st.sidebar:
+        st.markdown("### How to Play")
+        st.markdown("""
+        1. Enter start and target words
+        2. Change one letter at a time
+        3. Each new word must be valid
+        4. Reach the target word within moves limit
+        """)
 
 if __name__ == "__main__":
     main_screen()

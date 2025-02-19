@@ -14,28 +14,32 @@ class GraphVisualizer:
             os.environ["PATH"] += os.pathsep + r"C:\Program Files\Graphviz\bin"
 
     def create_graph(self, nodes, edges, solution_path=None):
-        """Create graph with player path and solution path"""
+        """Create an interactive graph visualization"""
         self.graph.clear()
-
-        # Add nodes
+        
+        # Add nodes with different colors based on their role
         for node in nodes:
-            if node == nodes[0]:
-                self.graph.node(node, style='filled', fillcolor='lightgreen')
-            elif node == nodes[-1]:
-                self.graph.node(node, style='filled', fillcolor='lightblue')
-            else:
-                self.graph.node(node, style='filled', fillcolor='white')
-
-        # Add edges for player path
+            if node == nodes[0]:  # Start word
+                self.graph.node(node, fillcolor='lightgreen', style='filled')
+            elif node == nodes[-1]:  # Current word
+                self.graph.node(node, fillcolor='lightblue', style='filled')
+            else:  # Intermediate words
+                self.graph.node(node, fillcolor='white', style='filled')
+                
+        # Add edges for player's path
         for edge in edges:
-            self.graph.edge(edge[0], edge[1], color='blue', penwidth='2.0')
-
-        # Add solution path edges (if requested)
+            self.graph.edge(edge[0], edge[1], color='blue')
+            
+        # Add solution path edges if shown
         if solution_path:
             for i in range(len(solution_path)-1):
                 if solution_path[i] not in nodes or solution_path[i+1] not in nodes:
-                    self.graph.edge(solution_path[i], solution_path[i+1], 
-                                  color='red', style='dashed')
+                    self.graph.edge(
+                        solution_path[i],
+                        solution_path[i+1],
+                        color='red',
+                        style='dashed'
+                    )
 
     def render_graph(self, filename=None):
         """Render the graph to a file"""
