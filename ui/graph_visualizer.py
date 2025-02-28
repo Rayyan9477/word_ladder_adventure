@@ -13,15 +13,38 @@ class GraphVisualizer:
         if platform.system() == 'Windows':
             os.environ["PATH"] += os.pathsep + r"C:\Program Files\Graphviz\bin"
 
-    def create_graph(self, nodes, edges, solution_path=None):
+    def render_graph(self, filename):
+            """Render the graph to a PNG file and open it using the system default viewer."""
+            try:
+                output_filepath = self.graph.render(
+                    filename=filename,
+                    format='png',
+                    view=True,
+                    cleanup=True
+                )
+                print(f"Graph rendered and available at: {output_filepath}")
+            except Exception as e:
+                print("Error rendering graph:", e)
+            
+    def create_graph(self, graph_data, filename):
         """Create an interactive graph visualization"""
         self.graph.clear()
         
+        if not graph_data:
+            return
+            
+        nodes = graph_data.get('nodes', [])
+        edges = graph_data.get('edges', [])
+        solution_path = graph_data.get('solution_path', [])
+        
+        if not nodes:
+            return
+        
         # Add nodes with different colors based on their role
-        for node in nodes:
-            if node == nodes[0]:  # Start word
+        for i, node in enumerate(nodes):
+            if i == 0:  # Start word
                 self.graph.node(node, fillcolor='lightgreen', style='filled')
-            elif node == nodes[-1]:  # Current word
+            elif i == len(nodes) - 1:  # Current word
                 self.graph.node(node, fillcolor='lightblue', style='filled')
             else:  # Intermediate words
                 self.graph.node(node, fillcolor='white', style='filled')
@@ -40,38 +63,6 @@ class GraphVisualizer:
                         color='red',
                         style='dashed'
                     )
-
-    def render_graph(self, filename=None):
-        """Render the graph to a file"""
-        try:
-            if filename is None:
-                dir_path = os.path.join(os.path.dirname(__file__), '..', 'static')
-                os.makedirs(dir_path, exist_ok=True)
-                filename = os.path.join(dir_path, 'word_ladder')
-            
-            # Ensure the directory exists
-            os.makedirs(os.path.dirname(filename), exist_ok=True)
-            
-            # Generate the graph
-            png_filename = f"{filename}.png"
-            self.graph.render(filename, format='png', cleanup=True)
-            
-            if not os.path.exists(png_filename):
-                raise Exception("Failed to create graph image")
-            
-            return png_filename
-                
-        except Exception as e:
-            alt_paths = [
-                r"C:\Program Files\Graphviz\bin\dot.exe",
-                r"C:\Program Files (x86)\Graphviz\bin\dot.exe"
-            ]
-            for path in alt_paths:
-                if os.path.exists(path):
-                    os.environ["GRAPHVIZ_DOT"] = path
-                    png_filename = f"{filename}.png"
-                    self.graph.render(filename, format='png', cleanup=True)
-                    if os.path.exists(png_filename):
-                        return png_filename
-                    
-            raise Exception(f"Error rendering graph: {str(e)}\nPlease ensure Graphviz is installed and in your system PATH")
+        
+        # Render the graph
+        self.render_graph(filename)
