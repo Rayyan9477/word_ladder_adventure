@@ -6,6 +6,7 @@ from ui.graph_visualizer import GraphVisualizer
 from utils.word_generator import RandomWordGenerator
 from ui.algorithm_stats import AlgorithmVisualizer
 
+
 def main_screen():
     st.set_page_config(page_title="Word Ladder Adventure", layout="wide")
     st.title("Word Ladder Adventure Game")
@@ -69,13 +70,14 @@ def main_screen():
         )
         
         if st.button("Generate Random Words"):
-            start_word, end_word = st.session_state.word_generator.get_random_pair(difficulty)
-            if start_word and end_word:
-                st.session_state.random_start = start_word
-                st.session_state.random_end = end_word
-                st.success(f"Generated: {start_word} → {end_word}")
-            else:
-                st.error("Couldn't generate suitable word pair, try again")
+            with st.spinner("Looking for suitable word pairs..."):
+                start_word, end_word = st.session_state.word_generator.get_random_pair(difficulty)
+                if start_word and end_word:
+                    st.session_state.random_start = start_word
+                    st.session_state.random_end = end_word
+                    st.success(f"Generated: {start_word} → {end_word}")
+                else:
+                    st.error("Couldn't generate suitable word pair, try again")
 
         # New Game button
         if st.button("New Game"):
@@ -87,8 +89,9 @@ def main_screen():
                     pass
             
             # Reset session state
-            if 'current_graph' in st.session_state:
-                del st.session_state['current_graph']
+            for key in ['current_graph', 'last_word', 'show_comparison']:
+                if key in st.session_state:
+                    del st.session_state[key]
             
             # Create new game instance
             st.session_state.game = WordLadderGame(
@@ -123,14 +126,15 @@ def main_screen():
                 
             if st.button("Start Game") and start_word and end_word:
                 try:
-                    if game.start_game(start_word, end_word):
-                        st.success("Game started!")
-                        # Clear random words from session state
-                        if 'random_start' in st.session_state:
-                            del st.session_state['random_start']
-                        if 'random_end' in st.session_state:
-                            del st.session_state['random_end']
-                        st.rerun()
+                    with st.spinner("Starting game..."):
+                        if game.start_game(start_word, end_word):
+                            st.success("Game started!")
+                            # Clear random words from session state
+                            if 'random_start' in st.session_state:
+                                del st.session_state['random_start']
+                            if 'random_end' in st.session_state:
+                                del st.session_state['random_end']
+                            st.rerun()
                 except ValueError as e:
                     st.error(str(e))
         
@@ -152,7 +156,17 @@ def main_screen():
                         success, message = game.make_move(next_word)
                         if success:
                             st.success(message)
-                            st.rerun()
+                            # Remove the current graph to ensure it's updated
+                            if 'current_graph' in st.session_state:
+                                del st.session_state['current_graph']
+                            
+                            # Set flag for showing algorithm comparison only if game is over
+                            if game.game_over:
+                                st.session_state.show_comparison = True
+                            
+                            # Rerun unless game is over
+                            if not game.game_over:
+                                st.rerun()
                         else:
                             st.error(message)
                 
@@ -164,39 +178,31 @@ def main_screen():
                     else:
                         st.warning(hint_message)
 
-            # Show visualization of the word ladder
+            # Show visualization of the word ladder during gameplay - ONLY player path
             with col2:
-                if 'current_graph' not in st.session_state:
-                    # Generate graph visualization
-                    graph_data = game.get_graph_data()
-                    if graph_data and graph_data.get('nodes'):  # Fixed this line
-                        visualizer = GraphVisualizer()
-                        visualizer.create_graph(graph_data, image_path)
-                        st.session_state.current_graph = True
-                    
-                if os.path.exists(f"{image_path}.png"):
-                    st.image(f"{image_path}.png")
-                else:
-                    st.info("Graph visualization will appear here")
-                    
-            # Algorithm Comparison Section
-            st.header("Algorithm Comparison")
-            algo_stats = game.get_algorithm_comparison()
-            if algo_stats:
-                try:  # Add try-except block
-                    fig = AlgorithmVisualizer.show_algorithm_comparison(algo_stats)
-                    if fig:
-                        st.pyplot(fig)
+                # During gameplay, only show player's progression
+                if len(game.player_path) > 1:  # Only show when there's actual movement
+                    # Check if graph needs updating
+                    if 'current_graph' not in st.session_state or 'last_word' not in st.session_state or st.session_state.last_word != game.current_word:
+                        # Create gameplay graph that only shows player's path, not solution
+                        gameplay_data = {
+                            'nodes': game.player_path.copy(),
+                            'edges': [(game.player_path[i], game.player_path[i+1]) 
+                                    for i in range(len(game.player_path)-1)],
+                            # Don't include solution path during gameplay
+                            'solution_path': []
+                        }
                         
-                    # Display path differences
-                    st.subheader("Paths Found by Different Algorithms")
-                    for algo, stats in algo_stats.items():
-                        if stats.get('path'):  # Use get() to avoid KeyError
-                            st.write(f"**{algo.upper()}**: {' → '.join(stats['path'])}")
-                except Exception as e:
-                    st.error(f"Error displaying algorithm comparison: {str(e)}")
-            else:
-                st.write("Algorithm comparison data not available")
+                        visualizer = GraphVisualizer()
+                        visualizer.create_graph(gameplay_data, image_path)
+                        st.session_state.current_graph = True
+                        st.session_state.last_word = game.current_word
+                    
+                    # Display the graph
+                    if os.path.exists(f"{image_path}.png"):
+                        st.image(f"{image_path}.png")
+                else:
+                    st.info("Graph will appear when you make your first move")
 
     else:
         # Game over screen
@@ -212,17 +218,6 @@ def main_screen():
             if game.solution_path:
                 optimal_str = " → ".join(game.solution_path)
                 st.write(f"Optimal path ({len(game.solution_path)-1} moves): {optimal_str}")
-                
-            # Show algorithm comparison at game end too
-            st.header("Algorithm Comparison")
-            algo_stats = game.get_algorithm_comparison()
-            if algo_stats:
-                try:  # Add try-except block
-                    fig = AlgorithmVisualizer.show_algorithm_comparison(algo_stats)
-                    if fig:
-                        st.pyplot(fig)
-                except Exception as e:
-                    st.error(f"Error displaying algorithm comparison: {str(e)}")
         else:
             st.error("Game Over! You've run out of moves.")
             
@@ -235,6 +230,52 @@ def main_screen():
                 optimal_str = " → ".join(game.solution_path)
                 st.write(f"Optimal path: {optimal_str}")
 
+        # For game over state only, create a new graph showing both paths
+        st.header("Final Path Visualization")
+        
+        # Only create a fresh complete graph at game end
+        if not os.path.exists(f"{image_path}_final.png"):
+            # Generate final graph with both player path and solution
+            final_graph_data = {
+                'nodes': game.player_path.copy(),
+                'edges': [(game.player_path[i], game.player_path[i+1]) 
+                        for i in range(len(game.player_path)-1)],
+                'solution_path': game.solution_path
+            }
+            
+            visualizer = GraphVisualizer()
+            visualizer.create_graph(final_graph_data, f"{image_path}_final")
+        
+        # Show the final graph
+        if os.path.exists(f"{image_path}_final.png"):
+            st.image(f"{image_path}_final.png")
+        else:
+            st.error("Could not generate final visualization")
+        
+        # Only show algorithm comparison at the end if flag is set
+        if st.session_state.get('show_comparison', True):
+            st.header("Algorithm Comparison")
+            algo_stats = game.get_algorithm_comparison()
+            if algo_stats:
+                try:
+                    fig = AlgorithmVisualizer.show_algorithm_comparison(algo_stats)
+                    if fig:
+                        st.pyplot(fig)
+                        
+                    # Display path differences
+                    st.subheader("Paths Found by Different Algorithms")
+                    for algo, stats in algo_stats.items():
+                        if stats.get('path'):
+                            path = stats.get('path')
+                            if path:
+                                st.write(f"**{algo.upper()}** ({len(path)-1} moves): {' → '.join(path)}")
+                            else:
+                                st.write(f"**{algo.upper()}**: No path found")
+                except Exception as e:
+                    st.error(f"Error displaying algorithm comparison: {str(e)}")
+            else:
+                st.warning("Algorithm comparison data not available")
+
         if st.button("Play Again"):
             # Clean up
             if os.path.exists(f"{image_path}.png"):
@@ -242,8 +283,17 @@ def main_screen():
                     os.remove(f"{image_path}.png")
                 except Exception:
                     pass
-            if 'current_graph' in st.session_state:
-                del st.session_state['current_graph']
+                
+            if os.path.exists(f"{image_path}_final.png"):
+                try:
+                    os.remove(f"{image_path}_final.png")
+                except Exception:
+                    pass
+            
+            # Reset session state
+            for key in ['current_graph', 'last_word', 'show_comparison']:
+                if key in st.session_state:
+                    del st.session_state[key]
             
             # New game
             st.session_state.game = WordLadderGame(
