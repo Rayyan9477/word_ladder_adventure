@@ -1,6 +1,6 @@
 Flask==2.0.1
-streamlit==1.0.0
-numpy==1.21.0
+streamlit
+matplotlib
 networkx==2.5.1
 pytest==6.2.4
 graphviz

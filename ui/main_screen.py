@@ -82,11 +82,12 @@ def main_screen():
         # New Game button
         if st.button("New Game"):
             # Clean up old graph
-            if os.path.exists(f"{image_path}.png"):
-                try:
-                    os.remove(f"{image_path}.png")
-                except Exception:
-                    pass
+            for suffix in ['', '_final']:
+                if os.path.exists(f"{image_path}{suffix}.png"):
+                    try:
+                        os.remove(f"{image_path}{suffix}.png")
+                    except Exception:
+                        pass
             
             # Reset session state
             for key in ['current_graph', 'last_word', 'show_comparison']:
@@ -160,7 +161,7 @@ def main_screen():
                             if 'current_graph' in st.session_state:
                                 del st.session_state['current_graph']
                             
-                            # Set flag for showing algorithm comparison only if game is over
+                            # Always set flag for showing algorithm comparison at the end
                             if game.game_over:
                                 st.session_state.show_comparison = True
                             
@@ -207,8 +208,19 @@ def main_screen():
     else:
         # Game over screen
         if game.won:
-            st.success("🎉 Congratulations! You've completed the word ladder!")
-            st.subheader(f"Final score: {game.calculate_score()}")
+            # Enhanced success message with celebratory elements
+            st.balloons()  # Show balloons for celebration
+            
+            # Display a more enthusiastic success message with emojis
+            st.markdown("""
+            <div style='background-color:#C5E1A5;padding:20px;border-radius:10px'>
+                <h1 style='text-align:center;color:#2E7D32'>🎉 WOOHOO! 🎊</h1>
+                <h2 style='text-align:center'>Amazing job! You've conquered the word ladder!</h2>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Display score with excitement
+            st.subheader(f"🌟 Final score: {game.calculate_score()} 🌟")
             
             # Display the path taken
             path_str = " → ".join(game.player_path)
@@ -218,6 +230,17 @@ def main_screen():
             if game.solution_path:
                 optimal_str = " → ".join(game.solution_path)
                 st.write(f"Optimal path ({len(game.solution_path)-1} moves): {optimal_str}")
+                
+                # Add a congratulatory message based on how close they were to optimal
+                player_moves = len(game.player_path) - 1
+                optimal_moves = len(game.solution_path) - 1
+                if player_moves == optimal_moves:
+                    st.success("🏆 Perfect! You found the optimal solution!")
+                elif player_moves <= optimal_moves + 2:
+                    st.success("👏 Great job! Your solution was very close to optimal!")
+                else:
+                    st.info("Next time, try to find a shorter path!")
+                
         else:
             st.error("Game Over! You've run out of moves.")
             
@@ -252,43 +275,37 @@ def main_screen():
         else:
             st.error("Could not generate final visualization")
         
-        # Only show algorithm comparison at the end if flag is set
-        if st.session_state.get('show_comparison', True):
-            st.header("Algorithm Comparison")
-            algo_stats = game.get_algorithm_comparison()
-            if algo_stats:
-                try:
-                    fig = AlgorithmVisualizer.show_algorithm_comparison(algo_stats)
-                    if fig:
-                        st.pyplot(fig)
-                        
-                    # Display path differences
-                    st.subheader("Paths Found by Different Algorithms")
-                    for algo, stats in algo_stats.items():
-                        if stats.get('path'):
-                            path = stats.get('path')
-                            if path:
-                                st.write(f"**{algo.upper()}** ({len(path)-1} moves): {' → '.join(path)}")
-                            else:
-                                st.write(f"**{algo.upper()}**: No path found")
-                except Exception as e:
-                    st.error(f"Error displaying algorithm comparison: {str(e)}")
-            else:
-                st.warning("Algorithm comparison data not available")
+        # ALWAYS show algorithm comparison at end of game
+        st.header("Algorithm Comparison")
+        algo_stats = game.get_algorithm_comparison()
+        if algo_stats:
+            try:
+                fig = AlgorithmVisualizer.show_algorithm_comparison(algo_stats)
+                if fig:
+                    st.pyplot(fig)
+                    
+                # Display path differences
+                st.subheader("Paths Found by Different Algorithms")
+                for algo, stats in algo_stats.items():
+                    if stats.get('path'):
+                        path = stats.get('path')
+                        if path:
+                            st.write(f"**{algo.upper()}** ({len(path)-1} moves): {' → '.join(path)}")
+                        else:
+                            st.write(f"**{algo.upper()}**: No path found")
+            except Exception as e:
+                st.error(f"Error displaying algorithm comparison: {str(e)}")
+        else:
+            st.warning("Algorithm comparison data not available")
 
         if st.button("Play Again"):
             # Clean up
-            if os.path.exists(f"{image_path}.png"):
-                try:
-                    os.remove(f"{image_path}.png")
-                except Exception:
-                    pass
-                
-            if os.path.exists(f"{image_path}_final.png"):
-                try:
-                    os.remove(f"{image_path}_final.png")
-                except Exception:
-                    pass
+            for suffix in ['', '_final']:
+                if os.path.exists(f"{image_path}{suffix}.png"):
+                    try:
+                        os.remove(f"{image_path}{suffix}.png")
+                    except Exception:
+                        pass
             
             # Reset session state
             for key in ['current_graph', 'last_word', 'show_comparison']:

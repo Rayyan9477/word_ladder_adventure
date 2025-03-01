@@ -10,8 +10,9 @@ class AlgorithmFactory:
         algorithms = {
             'bfs': bfs,
             'a_star': a_star_search,
+            'a*': a_star_search,  # Add this line to accept 'a*' as input
             'ucs': uniform_cost_search,
-            'gbfs': greedy_best_first_search
+            'gbfs': lambda s, t, d: greedy_best_first_search(s, t, d)
         }
         
         if algorithm_name.lower() not in algorithms:

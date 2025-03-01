@@ -14,18 +14,20 @@ class GraphVisualizer:
             os.environ["PATH"] += os.pathsep + r"C:\Program Files\Graphviz\bin"
 
     def render_graph(self, filename):
-            """Render the graph to a PNG file and open it using the system default viewer."""
-            try:
-                output_filepath = self.graph.render(
-                    filename=filename,
-                    format='png',
-                    view=True,
-                    cleanup=True
-                )
-                print(f"Graph rendered and available at: {output_filepath}")
-            except Exception as e:
-                print("Error rendering graph:", e)
-            
+        """Render the graph to a PNG file without trying to open it"""
+        try:
+            # Render without view=True to avoid xdg-open error
+            output_filepath = self.graph.render(
+                filename=filename,
+                format='png',
+                cleanup=True
+            )
+            print(f"Graph rendered and available at: {output_filepath}")
+            return output_filepath
+        except Exception as e:
+            print("Error rendering graph:", e)
+            return None
+
     def create_graph(self, graph_data, filename):
         """Create an interactive graph visualization"""
         self.graph.clear()
@@ -65,4 +67,4 @@ class GraphVisualizer:
                     )
         
         # Render the graph
-        self.render_graph(filename)
+        return self.render_graph(filename)

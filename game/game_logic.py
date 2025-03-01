@@ -30,6 +30,7 @@ class WordLadderGame:
         algorithms = {
             'bfs': bfs,
             'a_star': a_star_search,
+            'a*': a_star_search,
             'ucs': uniform_cost_search,
             'gbfs': lambda s, t, d: greedy_best_first_search(s, t, d)  # Use lambda to handle optional heuristic
         }
@@ -67,12 +68,15 @@ class WordLadderGame:
         algorithms = {
             'bfs': bfs,
             'a_star': a_star_search,
+            'a*' : a_star_search,  
             'ucs': uniform_cost_search,
             'gbfs': lambda s, t, d: greedy_best_first_search(s, t, d)  # Use lambda to handle optional heuristic
         }
         
         results = {}
         for name, algorithm in algorithms.items():
+            if name == 'a*' :
+                continue
             start_time = time.time()
             try:
                 path = algorithm(start_word, target_word, self.dictionary)
