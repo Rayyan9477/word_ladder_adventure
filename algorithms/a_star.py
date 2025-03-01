@@ -3,22 +3,11 @@ from queue import PriorityQueue
 import logging
 
 def a_star_search(start_word, target_word, word_dict):
-    """
-    Implements the A* search algorithm to find the shortest word ladder.
-
-    Args:
-        start_word (str): The starting word.
-        target_word (str): The target word.
-        word_dict (set): A set of valid words.
-
-    Returns:
-        list: The shortest word ladder, or None if no path is found.
-    """
+    
     def heuristic(word1, word2):
         return sum(1 for a, b in zip(word1, word2) if a != b)
 
     def get_neighbors(word, word_dict):
-        """Get all possible neighbors by changing one letter at a time."""
         neighbors = []
         word = word.upper()
         letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'

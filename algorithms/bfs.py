@@ -2,10 +2,7 @@ from collections import deque
 import logging
 
 def bfs(start_word, target_word, word_dict):
-    """
-    Breadth-first search implementation for word ladder.
-    Returns the shortest path from start_word to target_word.
-    """
+
     if start_word == target_word:
         return [start_word]
 
@@ -15,7 +12,6 @@ def bfs(start_word, target_word, word_dict):
     while queue:
         current_word, path = queue.popleft()
         
-        # Get all possible one-letter transformations
         for i in range(len(current_word)):
             for c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ':
                 next_word = current_word[:i] + c + current_word[i+1:]

@@ -6,7 +6,6 @@ from algorithms.gbfs import greedy_best_first_search
 class AlgorithmFactory:
     @staticmethod
     def create_algorithm(algorithm_name):
-        """Factory method to create algorithm instances"""
         algorithms = {
             'bfs': bfs,
             'a_star': a_star_search,

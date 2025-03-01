@@ -19,6 +19,5 @@ def handle_input():
             break
         if validate_input(word):
             print(f"You entered a valid word: {word}")
-            # Further processing can be done here
         else:
             continue

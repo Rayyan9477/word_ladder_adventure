@@ -42,11 +42,9 @@ class BeginnerMode:
     
 
     def setup_mode(self):
-        """Configure game for beginner mode"""
         self.game.hints_remaining = self.max_hints
         self.game.max_moves += 5  # Extra moves
         
     def calculate_score(self):
-        """Modified scoring for beginners"""
         base_score = self.game.calculate_score()
         return int(base_score * 0.8)  # Reduced scoring pressure

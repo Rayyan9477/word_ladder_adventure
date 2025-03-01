@@ -12,46 +12,38 @@ def main_screen():
     st.title("Word Ladder Adventure Game")
     st.write("Transform one word into another by changing one letter at a time!")
 
-    # Create static directory for images if it doesn't exist
     static_dir = os.path.join(os.path.dirname(__file__), '..', 'static')
     os.makedirs(static_dir, exist_ok=True)
     image_path = os.path.join(static_dir, 'word_ladder')
 
-    # Initialize dictionary loader if not in session state
     if 'dictionary_loader' not in st.session_state:
         st.session_state.dictionary_loader = DictionaryLoader('data/dictionary.txt')
 
-    # Initialize random word generator if not in session state
     if 'word_generator' not in st.session_state:
         dictionary = st.session_state.dictionary_loader.get_all_words()
         st.session_state.word_generator = RandomWordGenerator(dictionary)
 
-    # Game options in sidebar
     with st.sidebar:
         st.header("Game Settings")
         
-        # Mode selection
         mode = st.selectbox(
             "Select Mode",
             ["Normal", "Beginner", "Advanced", "Challenge"],
             help="Choose game difficulty mode"
         )
         
-        # Algorithm selection
         algorithm = st.radio(
             "Select Algorithm",
             ['BFS', 'A*', 'UCS', 'GBFS'],
             help="Choose pathfinding algorithm"
         )
         
-        # Moves configuration
         base_moves = st.slider(
             "Base Moves", 
             5, 20, 10,
             help="Base number of moves allowed"
         )
 
-        # Adjust moves based on mode
         max_moves = base_moves
         if mode == "Beginner":
             st.info("Beginner mode: More hints and moves available")
@@ -60,7 +52,6 @@ def main_screen():
             st.warning("Challenge mode: Limited hints and moves")
             max_moves -= 2
 
-        # Auto mode with random words
         st.header("Auto Mode")
         difficulty = st.select_slider(
             "Word Difficulty",
@@ -79,9 +70,7 @@ def main_screen():
                 else:
                     st.error("Couldn't generate suitable word pair, try again")
 
-        # New Game button
         if st.button("New Game"):
-            # Clean up old graph
             for suffix in ['', '_final']:
                 if os.path.exists(f"{image_path}{suffix}.png"):
                     try:
@@ -89,36 +78,32 @@ def main_screen():
                     except Exception:
                         pass
             
-            # Reset session state
             for key in ['current_graph', 'last_word', 'show_comparison']:
                 if key in st.session_state:
                     del st.session_state[key]
             
-            # Create new game instance
             st.session_state.game = WordLadderGame(
                 st.session_state.dictionary_loader.get_all_words(),
                 algorithm=algorithm.lower(),
-                max_moves=max_moves
+                max_moves=max_moves,
+                mode=mode
             )
             st.rerun()
 
-    # Initialize game if not in session state
     if 'game' not in st.session_state:
         st.session_state.game = WordLadderGame(
             st.session_state.dictionary_loader.get_all_words(),
             algorithm=algorithm.lower(),
-            max_moves=max_moves
+            max_moves=max_moves,
+            mode=mode
         )
 
     game = st.session_state.game
 
-    # Main game area
     if not game.game_over:
-        # Game initialization
         if not game.start_word:
             col1, col2 = st.columns(2)
             with col1:
-                # Use random word if available
                 default_start = st.session_state.get('random_start', '')
                 start_word = st.text_input("Start word:", value=default_start).strip().upper()
             with col2:
@@ -130,7 +115,6 @@ def main_screen():
                     with st.spinner("Starting game..."):
                         if game.start_game(start_word, end_word):
                             st.success("Game started!")
-                            # Clear random words from session state
                             if 'random_start' in st.session_state:
                                 del st.session_state['random_start']
                             if 'random_end' in st.session_state:
@@ -139,9 +123,7 @@ def main_screen():
                 except ValueError as e:
                     st.error(str(e))
         
-        # Game play
         else:
-            # Display current game state
             col1, col2 = st.columns(2)
             with col1:
                 st.subheader(f"Start: {game.start_word} → Target: {game.end_word}")
@@ -149,7 +131,6 @@ def main_screen():
                 st.write(f"Moves remaining: {game.moves_remaining}")
                 st.write(f"Hints remaining: {game.hints_remaining}")
                 
-                # Allow next word input
                 next_word = st.text_input("Enter next word:", key="next_word").strip().upper()
                 
                 if st.button("Make Move"):
@@ -157,16 +138,13 @@ def main_screen():
                         success, message = game.make_move(next_word)
                         if success:
                             st.success(message)
-                            # Remove the current graph to ensure it's updated
                             if 'current_graph' in st.session_state:
                                 del st.session_state['current_graph']
                             
-                            # Always set flag for showing algorithm comparison at the end
                             if game.game_over:
                                 st.session_state.show_comparison = True
-                            
-                            # Rerun unless game is over
-                            if not game.game_over:
+                                st.rerun()
+                            else:
                                 st.rerun()
                         else:
                             st.error(message)
@@ -179,18 +157,13 @@ def main_screen():
                     else:
                         st.warning(hint_message)
 
-            # Show visualization of the word ladder during gameplay - ONLY player path
             with col2:
-                # During gameplay, only show player's progression
-                if len(game.player_path) > 1:  # Only show when there's actual movement
-                    # Check if graph needs updating
+                if len(game.player_path) > 1:
                     if 'current_graph' not in st.session_state or 'last_word' not in st.session_state or st.session_state.last_word != game.current_word:
-                        # Create gameplay graph that only shows player's path, not solution
                         gameplay_data = {
                             'nodes': game.player_path.copy(),
                             'edges': [(game.player_path[i], game.player_path[i+1]) 
                                     for i in range(len(game.player_path)-1)],
-                            # Don't include solution path during gameplay
                             'solution_path': []
                         }
                         
@@ -199,43 +172,63 @@ def main_screen():
                         st.session_state.current_graph = True
                         st.session_state.last_word = game.current_word
                     
-                    # Display the graph
                     if os.path.exists(f"{image_path}.png"):
                         st.image(f"{image_path}.png")
                 else:
                     st.info("Graph will appear when you make your first move")
 
     else:
-        # Game over screen
         if game.won:
-            # Enhanced success message with celebratory elements
-            st.balloons()  # Show balloons for celebration
+            st.balloons()
             
-            # Display a more enthusiastic success message with emojis
             st.markdown("""
-            <div style='background-color:#C5E1A5;padding:20px;border-radius:10px'>
-                <h1 style='text-align:center;color:#2E7D32'>🎉 WOOHOO! 🎊</h1>
-                <h2 style='text-align:center'>Amazing job! You've conquered the word ladder!</h2>
+            <style>
+            @keyframes victory-pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+                100% { transform: scale(1); }
+            }
+            .victory-banner {
+                background: linear-gradient(135deg, #4CAF50, #8BC34A);
+                border-radius: 15px;
+                padding: 20px;
+                text-align: center;
+                margin-bottom: 25px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                animation: victory-pulse 1.5s infinite;
+            }
+            .victory-title {
+                color: white;
+                text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+                font-size: 2.5em;
+                margin-bottom: 10px;
+            }
+            .victory-subtitle {
+                color: white;
+                font-size: 1.5em;
+                margin-bottom: 5px;
+            }
+            </style>
+            
+            <div class="victory-banner">
+                <div class="victory-title">🏆 VICTORY! 🏆</div>
+                <div class="victory-subtitle">Brilliant work! You've mastered the word ladder!</div>
             </div>
             """, unsafe_allow_html=True)
             
-            # Display score with excitement
             st.subheader(f"🌟 Final score: {game.calculate_score()} 🌟")
             
-            # Display the path taken
             path_str = " → ".join(game.player_path)
             st.write(f"Your path ({len(game.player_path)-1} moves): {path_str}")
             
-            # Display optimal solution for comparison
             if game.solution_path:
                 optimal_str = " → ".join(game.solution_path)
                 st.write(f"Optimal path ({len(game.solution_path)-1} moves): {optimal_str}")
                 
-                # Add a congratulatory message based on how close they were to optimal
                 player_moves = len(game.player_path) - 1
                 optimal_moves = len(game.solution_path) - 1
                 if player_moves == optimal_moves:
-                    st.success("🏆 Perfect! You found the optimal solution!")
+                    st.success("🎯 Perfect! You found the optimal solution!")
                 elif player_moves <= optimal_moves + 2:
                     st.success("👏 Great job! Your solution was very close to optimal!")
                 else:
@@ -244,21 +237,16 @@ def main_screen():
         else:
             st.error("Game Over! You've run out of moves.")
             
-            # Show how far they got
             path_str = " → ".join(game.player_path)
             st.write(f"Your path: {path_str}")
             
-            # Show the optimal solution
             if game.solution_path:
                 optimal_str = " → ".join(game.solution_path)
                 st.write(f"Optimal path: {optimal_str}")
 
-        # For game over state only, create a new graph showing both paths
         st.header("Final Path Visualization")
         
-        # Only create a fresh complete graph at game end
         if not os.path.exists(f"{image_path}_final.png"):
-            # Generate final graph with both player path and solution
             final_graph_data = {
                 'nodes': game.player_path.copy(),
                 'edges': [(game.player_path[i], game.player_path[i+1]) 
@@ -269,25 +257,24 @@ def main_screen():
             visualizer = GraphVisualizer()
             visualizer.create_graph(final_graph_data, f"{image_path}_final")
         
-        # Show the final graph
         if os.path.exists(f"{image_path}_final.png"):
             st.image(f"{image_path}_final.png")
         else:
             st.error("Could not generate final visualization")
         
-        # ALWAYS show algorithm comparison at end of game
+        # ALWAYS show algorithm comparison at the end of the game
         st.header("Algorithm Comparison")
         algo_stats = game.get_algorithm_comparison()
+        
         if algo_stats:
             try:
                 fig = AlgorithmVisualizer.show_algorithm_comparison(algo_stats)
                 if fig:
                     st.pyplot(fig)
                     
-                # Display path differences
                 st.subheader("Paths Found by Different Algorithms")
                 for algo, stats in algo_stats.items():
-                    if stats.get('path'):
+                    if stats and stats.get('path'):
                         path = stats.get('path')
                         if path:
                             st.write(f"**{algo.upper()}** ({len(path)-1} moves): {' → '.join(path)}")
@@ -297,9 +284,34 @@ def main_screen():
                 st.error(f"Error displaying algorithm comparison: {str(e)}")
         else:
             st.warning("Algorithm comparison data not available")
+            
+        # Ensure algorithm comparison is always shown by forcing reload if not present
+        if 'algorithm_displayed' not in st.session_state:
+            st.session_state.algorithm_displayed = True
+            st.rerun()
 
-        if st.button("Play Again"):
-            # Clean up
+        st.markdown("""
+        <style>
+        .play-again-btn {
+            background-color: #2E86C1;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+        .play-again-btn:hover {
+            background-color: #1A5276;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        if st.button("Play Again", key="play_again"):
             for suffix in ['', '_final']:
                 if os.path.exists(f"{image_path}{suffix}.png"):
                     try:
@@ -307,20 +319,18 @@ def main_screen():
                     except Exception:
                         pass
             
-            # Reset session state
-            for key in ['current_graph', 'last_word', 'show_comparison']:
+            for key in ['current_graph', 'last_word', 'show_comparison', 'algorithm_displayed']:
                 if key in st.session_state:
                     del st.session_state[key]
             
-            # New game
             st.session_state.game = WordLadderGame(
                 st.session_state.dictionary_loader.get_all_words(),
                 algorithm=algorithm.lower(),
-                max_moves=max_moves
+                max_moves=max_moves,
+                mode=mode
             )
             st.rerun()
 
-    # Game instructions
     with st.sidebar:
         st.markdown("### How to Play")
         st.markdown("""
@@ -330,7 +340,6 @@ def main_screen():
         4. Reach the target word within moves limit
         """)
         
-        # Algorithm comparison information
         st.markdown("### Algorithm Information")
         st.markdown("""
         **BFS**: Finds shortest path by exploring all neighbors first
@@ -342,12 +351,10 @@ def main_screen():
         **GBFS**: Greedily follows heuristic towards goal
         """)
         
-        # Add auto mode button for complete autoplay
         st.header("Auto Play")
         if game.start_word and not game.game_over:
             if st.button("Auto Solve"):
                 if game.solution_path and len(game.solution_path) > 1:
-                    # Get the next word from solution path
                     current_index = game.player_path.index(game.current_word) if game.current_word in game.player_path else 0
                     solution_index = game.solution_path.index(game.current_word) if game.current_word in game.solution_path else 0
                     

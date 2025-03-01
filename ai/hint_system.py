@@ -11,9 +11,7 @@ class HintSystem:
         self.dictionary = dictionary
         
     def get_next_move(self, current_word, target_word, solution_path=None):
-        """Get the next best move based on the current word and target word"""
         if solution_path:
-            # If we have a solution path, find current position
             try:
                 current_index = solution_path.index(current_word)
                 if current_index < len(solution_path) - 1:
@@ -21,17 +19,13 @@ class HintSystem:
             except ValueError:
                 pass
         
-        # If current word not in solution path or no solution path provided,
-        # calculate the next move from current position
         new_path = bfs(current_word, target_word, self.dictionary)
         if new_path and len(new_path) > 1:
-            return new_path[1]  # Return the next step
+            return new_path[1]  
         
-        # Fallback: generate any valid next word
         return self.get_any_valid_move(current_word)
             
     def get_any_valid_move(self, word):
-        """Generate any valid move from the current word"""
         for i in range(len(word)):
             for c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ':
                 if c == word[i]:
@@ -44,24 +38,20 @@ class HintSystem:
         return None
         
     def get_difficulty_hint(self, word_pair):
-        """Assess the difficulty of a word transformation"""
         if not word_pair or len(word_pair) != 2:
             return "Unknown"
             
         current_word, next_word = word_pair
         
-        # Count the differences between words
         diff_positions = [i for i, (a, b) in enumerate(zip(current_word, next_word)) if a != b]
         if not diff_positions:
             return "Easy"
             
         position = diff_positions[0]
         
-        # Check if the change is at the beginning or end (easier)
         if position == 0 or position == len(current_word) - 1:
             return "Easy"
             
-        # Check if the change is for a common letter
         common_letters = 'AEIOURSTLN'
         if next_word[position] in common_letters:
             return "Medium"

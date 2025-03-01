@@ -8,43 +8,47 @@ import logging
 import time
 
 class WordLadderGame:
-    def __init__(self, dictionary, algorithm='bfs', max_moves=20):
-        """Initialize the game with dictionary and settings"""
+    def __init__(self, dictionary, algorithm='bfs', max_moves=20, mode="Normal"):
         self.dictionary = {word.upper() for word in dictionary}
-        self.algorithm = algorithm
+        self.algorithm = algorithm.lower()
         self.max_moves = max_moves
+        self.mode = mode
         self.start_word = None
         self.end_word = None
         self.current_word = None
         self.solution_path = None
         self.player_path = None
         self.moves_remaining = max_moves
-        self.hints_remaining = 3
+        
+        if mode == "Beginner":
+            self.hints_remaining = 5
+        elif mode == "Challenge":
+            self.hints_remaining = 1
+        else:
+            self.hints_remaining = 3
+            
         self.game_over = False
         self.won = False
         self.hint_system = HintSystem(self.dictionary)
-        self.algorithm_stats = {}  # Track algorithm performance
+        self.algorithm_stats = {}
         
     def find_path(self, start_word, target_word):
-        """Find path using selected algorithm"""
         algorithms = {
             'bfs': bfs,
             'a_star': a_star_search,
             'a*': a_star_search,
             'ucs': uniform_cost_search,
-            'gbfs': lambda s, t, d: greedy_best_first_search(s, t, d)  # Use lambda to handle optional heuristic
+            'gbfs': lambda s, t, d: greedy_best_first_search(s, t, d)
         }
         
         if self.algorithm not in algorithms:
             raise ValueError(f"Unknown algorithm: {self.algorithm}")
         
-        # Measure algorithm performance
         start_time = time.time()
         try:
             path = algorithms[self.algorithm](start_word, target_word, self.dictionary)
             end_time = time.time()
             
-            # Store algorithm stats
             self.algorithm_stats = {
                 'name': self.algorithm,
                 'time_taken': end_time - start_time,
@@ -64,19 +68,15 @@ class WordLadderGame:
         return path
         
     def compare_algorithms(self, start_word, target_word):
-        """Compare the performance of all algorithms"""
         algorithms = {
             'bfs': bfs,
             'a_star': a_star_search,
-            'a*' : a_star_search,  
             'ucs': uniform_cost_search,
-            'gbfs': lambda s, t, d: greedy_best_first_search(s, t, d)  # Use lambda to handle optional heuristic
+            'gbfs': lambda s, t, d: greedy_best_first_search(s, t, d)
         }
         
         results = {}
         for name, algorithm in algorithms.items():
-            if name == 'a*' :
-                continue
             start_time = time.time()
             try:
                 path = algorithm(start_word, target_word, self.dictionary)
@@ -98,21 +98,17 @@ class WordLadderGame:
         return results
 
     def start_game(self, start_word, end_word):
-        """Initialize game with start and end words"""
         start_word = start_word.upper()
         end_word = end_word.upper()
 
-        # Validate word lengths are equal
         if len(start_word) != len(end_word):
             raise ValueError("Start and end words must have the same length")
 
         if not is_valid_word(start_word, self.dictionary) or not is_valid_word(end_word, self.dictionary):
             raise ValueError("Both words must be valid dictionary words")
 
-        # Compare algorithm performance first
         self.algorithm_comparisons = self.compare_algorithms(start_word, end_word)
         
-        # Then find path with selected algorithm
         self.solution_path = self.find_path(start_word, end_word)
         if not self.solution_path:
             raise ValueError("No valid path exists between these words")
@@ -128,7 +124,6 @@ class WordLadderGame:
         return True
 
     def make_move(self, new_word):
-        """Make a move in the game"""
         new_word = new_word.upper()
         
         if self.game_over:
@@ -141,7 +136,6 @@ class WordLadderGame:
         if new_word not in self.dictionary:
             return False, "Not a valid word"
 
-        # Check if only one letter is different
         if len(new_word) != len(self.current_word):
             return False, "Words must be the same length"
             
@@ -165,7 +159,6 @@ class WordLadderGame:
         return True, f"Valid move! {self.moves_remaining} moves remaining"
 
     def get_hint(self):
-        """Get AI-powered hint based on current game state"""
         if self.hints_remaining <= 0:
             return None, "No hints remaining"
         
@@ -188,11 +181,6 @@ class WordLadderGame:
         return None, "No hint available"
 
     def get_graph_data(self, key=None):
-        """Get data for graph visualization
-        
-        Args:
-            key: Optional key to return a specific part of the data
-        """
         data = {
             'nodes': self.player_path.copy() if self.player_path else [],
             'edges': [(self.player_path[i], self.player_path[i+1]) 
@@ -206,14 +194,12 @@ class WordLadderGame:
         return data
         
     def get_algorithm_comparison(self):
-        """Get algorithm comparison data for display"""
         if not hasattr(self, 'algorithm_comparisons'):
             return None
             
         return self.algorithm_comparisons
 
     def reset_game(self):
-        """Reset the game state to initial values"""
         self.start_word = None
         self.end_word = None
         self.current_word = None
@@ -222,11 +208,26 @@ class WordLadderGame:
         self.moves_remaining = self.max_moves
         self.game_over = False
         self.won = False
-        self.hints_remaining = 3
+        
+        if self.mode == "Beginner":
+            self.hints_remaining = 5
+        elif self.mode == "Challenge":
+            self.hints_remaining = 1
+        else:
+            self.hints_remaining = 3
 
     def calculate_score(self):
-        """Calculate score based on moves and hints used"""
         base_score = 100
-        move_penalty = 5 * (len(self.player_path) - len(self.solution_path))
-        hint_penalty = 10 * (3 - self.hints_remaining)
+        move_penalty = 5 * max(0, len(self.player_path) - len(self.solution_path))
+        
+        if self.mode == "Beginner":
+            max_hints = 5
+            hint_penalty = 5 * (max_hints - self.hints_remaining)
+        elif self.mode == "Challenge":
+            max_hints = 1
+            hint_penalty = 20 * (max_hints - self.hints_remaining)
+        else:
+            max_hints = 3
+            hint_penalty = 10 * (max_hints - self.hints_remaining)
+            
         return max(0, base_score - move_penalty - hint_penalty)

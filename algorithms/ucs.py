@@ -29,7 +29,7 @@ def uniform_cost_search(start_word, target_word, word_dict):
             if neighbor == target_word:
                 return reconstruct_path(current_node, neighbor)
 
-            new_cost = current_node.cost + 1  # Assuming each transformation has a cost of 1
+            new_cost = current_node.cost + 1 
             priority_queue.put(Node(neighbor, new_cost, current_node))
 
     return None
