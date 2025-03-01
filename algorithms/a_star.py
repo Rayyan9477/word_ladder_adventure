@@ -1,4 +1,3 @@
-# Example for a_star.py
 from queue import PriorityQueue
 import logging
 
